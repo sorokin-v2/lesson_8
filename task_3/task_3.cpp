@@ -10,7 +10,8 @@ public:
     // Constructor/Assignment that binds to nullptr
     // This makes usage with nullptr cleaner
     My_unique_ptr(std::nullptr_t) : ptr_(nullptr) {}  //ptr_ инициализируется nullptr ( T* ptr_{ nullptr };), по-этому этот конструктор не обязателен?
-    
+/*
+    //Перемещающий конструктор от буржуев
     My_unique_ptr(My_unique_ptr&& moving) noexcept : ptr_(nullptr)
     {
         moving.swap(*this);
@@ -20,7 +21,12 @@ public:
         // the the standard provides some extra guarantees
         // and probably a more intuitive usage.
     }
-    
+*/
+    //Перемещающий конструктор наш:
+    My_unique_ptr(My_unique_ptr&& moving){
+        *this(std::move(moving));
+    }
+
     ~My_unique_ptr() {
         delete ptr_;
     }
@@ -30,22 +36,39 @@ public:
         reset();
         return *this;
     }
-
+/*
+    //Перемещающий оператор= (буржуйская версия)
     My_unique_ptr& operator= (My_unique_ptr&& moving) noexcept
     {
         moving.swap(*this);
         return *this;
         // See move constructor.
     }
+*/
 
-    T& operator*() const { return *ptr_;}
+    //Перемещающий оператор = (наш вариант)
+    My_unique_ptr& operator= (My_unique_ptr&& moving) {
+        delete ptr_;
+        ptr_ = moving.ptr_;
+        moving.ptr_ = nullptr;
+        return *this;
+    }
+
+    //Константная и не константная версия operator*
+    const T& operator*() const { return *ptr_;}
+    T& operator*() { return *ptr_; }
+
     T* operator->() const { return ptr_; }
+    
     explicit operator bool() const { return ptr_; }
     
     T* release() noexcept
     {
-        T* result = nullptr;
-        std::swap(result, ptr_);
+        //T* result = nullptr;
+        //std::swap(result, ptr_);
+        //Или так:
+        T* result = ptr_;
+        ptr_ = nullptr;
         return result;
     }
   
@@ -75,4 +98,14 @@ int main()
     std::cout << *my_unique_ptr << "\n";
     int* val2 = my_unique_ptr.release();
     std::cout << *val2 << "\n";
+
+    My_unique_ptr<int> i(new int(200));
+    std::cout << *i << "\n";
+    My_unique_ptr<int> j(new int(300));
+    std::cout << *j << "\n";
+    i = My_unique_ptr<int> (new int(500));
+    std::cout << *i << "\n";
+    //i = j;                    //НЕ прокатит т.к. запрещен оператор присваивания
+    i = std::move(j);     //А вто такое прокатит
+    std::cout << *i << "\n";
 }
